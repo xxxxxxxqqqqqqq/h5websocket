@@ -1,34 +1,38 @@
 package com.fxb.h5websocket;
 
+import com.fxb.h5websocket.config.WebSocketConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.websocket.*;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
  * WebSocket实现
  */
-@ServerEndpoint(value = "/websocket") //接受websocket请求路径
+@ServerEndpoint(value = "/websocket", configurator = WebSocketConfig.class) //接受websocket请求路径, 鉴权配置
 @Component
 public class MyWebSocket {
 
 
     //保存所有在线socket连接
-    private static Map<String,MyWebSocket> webSocketMap = new LinkedHashMap<>();
+    private static Map<String,MyWebSocket> webSocketMap = new ConcurrentHashMap<>();
 
     //记录当前在线数目
-    private static int count=0;
+    private static AtomicInteger count = new AtomicInteger();
 
     //当前连接（每个websocket连入都会创建一个MyWebSocket实例
     private Session session;
 
-    private Logger log = LoggerFactory.getLogger(this.getClass());
+    private static final Logger log = LoggerFactory.getLogger(MyWebSocket.class);
     //处理连接建立
     @OnOpen
     public void onOpen(Session session){
@@ -80,16 +84,16 @@ public class MyWebSocket {
 
     //获取在线连接数目
     public static int getCount(){
-        return count;
+        return count.get();
     }
 
     //操作count，使用synchronized确保线程安全
     private static synchronized void addCount(){
-        MyWebSocket.count++;
+        count.incrementAndGet();
     }
 
     private static synchronized void reduceCount(){
-        MyWebSocket.count--;
+        count.decrementAndGet();
     }
 }
 
